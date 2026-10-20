@@ -98,7 +98,14 @@ function normalizePatterns(value: unknown, fieldName: "include" | "exclude", war
   return [...new Set(normalized)];
 }
 
-function normalizeOutputDir(value: unknown, warnings: string[]): string {
+/**
+ * Resolves where reports are written.
+ * - A config file may only point inside the scanned repository (a scanned repo must not be able
+ *   to make RepoRadar write elsewhere on the machine).
+ * - An explicit `--output` flag may also be an absolute path, so a third-party repository can be
+ *   scanned without writing into it.
+ */
+function normalizeOutputDir(value: unknown, warnings: string[], allowAbsolute = false): string {
   if (value === undefined) {
     return ".reporadar";
   }
@@ -106,6 +113,10 @@ function normalizeOutputDir(value: unknown, warnings: string[]): string {
   if (typeof value !== "string" || value.trim().length === 0) {
     warnings.push("outputDir must be a non-empty relative path; defaulting to .reporadar.");
     return ".reporadar";
+  }
+
+  if (allowAbsolute && path.isAbsolute(value.trim())) {
+    return path.resolve(value.trim());
   }
 
   const normalized = value.replace(/\\/g, "/").trim().replace(/^\.\/+/, "");
@@ -199,17 +210,19 @@ function resolveConfigLocation(rootPath: string, explicitConfigPath?: string): s
 function validateConfig(rootPath: string, options: ScanOptions = {}): ValidatedConfigResult {
   const configPath = resolveConfigLocation(rootPath, options.configPath);
   if (!fs.existsSync(configPath)) {
+    // Kept (not discarded) so a rejected --output is reported instead of silently falling back.
+    const noConfigWarnings: string[] = [];
     return {
       projectName: null,
       includePatterns: [],
       excludePatterns: [],
       maxFiles: DEFAULT_MAX_FILES,
       maxFileSizeKb: DEFAULT_MAX_FILE_SIZE_KB,
-      outputDir: normalizeOutputDir(options.outputDir, []),
+      outputDir: normalizeOutputDir(options.outputDir, noConfigWarnings, true),
       reports: { ...DEFAULT_REPORT_SELECTION },
       configPath: null,
       configDetected: false,
-      configWarnings: [],
+      configWarnings: noConfigWarnings,
     };
   }
 
@@ -229,7 +242,7 @@ function validateConfig(rootPath: string, options: ScanOptions = {}): ValidatedC
       excludePatterns: [],
       maxFiles: DEFAULT_MAX_FILES,
       maxFileSizeKb: DEFAULT_MAX_FILE_SIZE_KB,
-      outputDir: normalizeOutputDir(options.outputDir, warnings),
+      outputDir: normalizeOutputDir(options.outputDir, warnings, true),
       reports: { ...DEFAULT_REPORT_SELECTION },
       configPath,
       configDetected: true,
@@ -244,7 +257,10 @@ function validateConfig(rootPath: string, options: ScanOptions = {}): ValidatedC
     warnings.push("projectName must be a non-empty string; the detected project name was kept.");
   }
 
-  const configuredOutputDir = options.outputDir ?? parsed.outputDir;
+  // Only the explicit CLI flag may leave the repository; the repo's own config may not.
+  const outputDir = options.outputDir !== undefined
+    ? normalizeOutputDir(options.outputDir, warnings, true)
+    : normalizeOutputDir(parsed.outputDir, warnings);
 
   return {
     projectName,
@@ -252,7 +268,7 @@ function validateConfig(rootPath: string, options: ScanOptions = {}): ValidatedC
     excludePatterns: normalizePatterns(parsed.exclude, "exclude", warnings),
     maxFiles: normalizePositiveInteger(parsed.maxFiles, "maxFiles", DEFAULT_MAX_FILES, warnings),
     maxFileSizeKb: normalizePositiveInteger(parsed.maxFileSizeKb, "maxFileSizeKb", DEFAULT_MAX_FILE_SIZE_KB, warnings),
-    outputDir: normalizeOutputDir(configuredOutputDir, warnings),
+    outputDir,
     reports: normalizeReports(parsed.reports, warnings),
     configPath,
     configDetected: true,
@@ -296,7 +312,8 @@ export function createScanContext(rootPath: string, options: ScanOptions = {}): 
   }
 
   const ignoredDirectories = new Set(DEFAULT_IGNORED_DIRECTORIES);
-  const outputDirName = path.posix.basename(config.outputDir);
+  // An absolute --output lives outside the scan (or is excluded below by name when inside it).
+  const outputDirName = path.basename(config.outputDir);
   if (outputDirName) {
     ignoredDirectories.add(outputDirName);
   }
@@ -309,7 +326,9 @@ export function createScanContext(rootPath: string, options: ScanOptions = {}): 
   });
   const allFiles = collected.files;
   const relativeFiles = allFiles.map((file) => toRelativePosix(normalizedRoot, file)).sort();
-  const outputPath = path.join(normalizedRoot, config.outputDir);
+  const outputPath = path.isAbsolute(config.outputDir)
+    ? config.outputDir
+    : path.join(normalizedRoot, config.outputDir);
   const packageJson = loadPackageJson(normalizedRoot);
   const fileContentCache = new Map<string, string>();
   const readSkipTracker = createSkipReasonTracker();
