@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/app-icon.webp" alt="RepoRadar AI icon" width="160"></p>
+
 # RepoRadar AI
 
 > Turn any codebase into AI-ready project intelligence — without paid AI.
@@ -318,13 +320,14 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ---
 
-## Author & Ownership
+## Creator
 
-RepoRadar AI is built and maintained by **Abed** for **abud.fun**.
+RepoRadar AI was created by **Abed**.
 
 - Website: [abud.fun](https://abud.fun)
 - GitHub: [@3bud-ZC](https://github.com/3bud-ZC)
-- Repository: [RepoRadar AI](https://github.com/3bud-ZC/RepoRadar-Ai)
+
+This project is open-source and available under the MIT License.
 
 ---
 

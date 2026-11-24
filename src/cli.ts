@@ -130,7 +130,7 @@ export function runCli(argv = process.argv): Promise<void> {
     .version(loadCliVersion())
     .addHelpText(
       "after",
-      "\nRepoRadar AI — Built by Abed for abud.fun\nhttps://github.com/3bud-ZC/RepoRadar-Ai",
+      "\nCreated by Abed — https://abud.fun",
     );
 
   program.configureOutput({

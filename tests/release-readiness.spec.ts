@@ -137,6 +137,6 @@ describe("phase 2F release readiness", () => {
     expect(pkg.scripts.validate).toContain("typecheck");
     expect(pkg.scripts["pack:dry-run"]).toBe("npm pack --dry-run");
     expect(pkg.sideEffects).toBe(false);
-    expect(pkg.author).toBe("Abed — abud.fun");
+    expect(pkg.author).toMatch(/^Abed/);
   });
 });

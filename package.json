@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "description": "Deterministic CLI scanner that turns any codebase into structured reports, architecture docs, and AI-agent context without cloud AI.",
   "license": "MIT",
-  "author": "Abed — abud.fun",
+  "author": "Abed",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/3bud-ZC/RepoRadar-Ai.git"
